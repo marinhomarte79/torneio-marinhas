@@ -8,20 +8,24 @@ const json = (body, status = 200) =>
 
 export default async (req) => {
   const store = getStore("torneio");
+  const url = new URL(req.url);
 
   if (req.method === "GET") {
+    if (url.searchParams.get("status")) {
+      const p = (process.env.ADMIN_PASSWORD || "").trim();
+      return json({ passwordConfigured: p.length > 0, passwordLength: p.length });
+    }
     const data = await store.get("data", { type: "json" });
     return json(data ?? null);
   }
 
   if (req.method === "POST") {
-    const expected = process.env.ADMIN_PASSWORD;
-    const given = req.headers.get("x-admin-password");
+    const expected = (process.env.ADMIN_PASSWORD || "").trim();
+    const given = (req.headers.get("x-admin-password") || "").trim();
     if (!expected || given !== expected) {
       await new Promise((r) => setTimeout(r, 800));
       return json({ error: "unauthorized" }, 401);
     }
-    const url = new URL(req.url);
     if (url.searchParams.get("check")) return json({ ok: true });
 
     let body;
